@@ -1,17 +1,13 @@
-# Build stage
-FROM node:22-alpine AS builder
+FROM node:20-alpine AS builder
 
-# Enable corepack for pnpm support
-RUN corepack enable
-
-# Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile --ignore-scripts
+# Install dependencies with exact specifications
+RUN npm install -g pnpm && \
+    pnpm install --frozen-lockfile --ignore-scripts
 
 # Copy source code
 COPY . .
@@ -20,30 +16,32 @@ COPY . .
 RUN pnpm build
 
 # Production stage
-FROM node:22-alpine
+FROM node:20-alpine
 
-# Enable corepack for pnpm support
-RUN corepack enable
-
-# Set working directory
 WORKDIR /app
+
+# Install pnpm in production image
+RUN npm install -g pnpm
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# Install only production dependencies
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+# Install production dependencies only
+RUN pnpm install --frozen-lockfile --ignore-scripts --prod
 
 # Copy built application from builder
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/prisma ./prisma
+
+# Create .next directory if it doesn't exist
+RUN mkdir -p .next
 
 # Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+# Set environment
+ENV NODE_ENV=production
 
-# Start the application
-CMD ["node", ".next/standalone/server.js"]
+# Run the application
+CMD ["pnpm", "start"]

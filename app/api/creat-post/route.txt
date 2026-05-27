@@ -1,0 +1,67 @@
+import { requireAuth, getTenantId } from "@/lib/auth-helpers";
+
+export async function POST(request: Request) {
+  try {
+    // 1. Check authentication
+    const user = await requireAuth();
+    const tenantId = await getTenantId();
+
+    if (!tenantId) {
+      return new Response(JSON.stringify({ error: "No tenant" }), {
+        status: 400,
+      });
+    }
+
+    // 2. Parse the incoming request
+    const body = await request.json();
+    const { title, content, platform } = body;
+
+    // 3. Basic validation
+    if (!content || !platform) {
+      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400,
+      });
+    }
+
+    // 4. (Optional) Save to your local database
+    // await prisma.post.create({...})
+
+    // 5. Forward the request to n8n webhook
+    const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL || "http://127.0.0.1:5678/webhook/create-post";
+    
+    const n8nResponse = await fetch(n8nWebhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantId,
+        userId: user.id,
+        title,
+        content,
+        platform,
+      }),
+    });
+
+    // 6. Handle n8n response
+    if (!n8nResponse.ok) {
+      console.error("n8n webhook failed:", await n8nResponse.text());
+      return new Response(JSON.stringify({ error: "Failed to trigger publishing pipeline" }), {
+        status: 500,
+      });
+    }
+
+    const n8nData = await n8nResponse.json();
+
+    // 7. Return success to the frontend
+    return new Response(JSON.stringify({ success: true, n8n: n8nData }), {
+      status: 200,
+    });
+
+  } catch (error) {
+    console.error("Error in create-post proxy:", error);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+    });
+  }
+}

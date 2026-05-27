@@ -1,15 +1,15 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import { Toaster } from 'sonner'
+import { AuthProvider } from '@/components/providers'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'PostFlow AI - Dashboard',
-  description: 'PostFlow AI Dashboard',
+  title: 'SaaS Pro - Multi-Tenant Platform',
+  description: 'Manage your social media business with our powerful SaaS platform',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -36,11 +36,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark bg-black">
-      <body className="font-sans antialiased bg-black text-white">
-        {children}
-        <Toaster theme="dark" />
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+    <html lang="en" className="bg-background">
+      <body className="font-sans antialiased">
+        <AuthProvider>
+          {children}
+          {process.env.NODE_ENV === 'production' && <Analytics />}
+        </AuthProvider>
       </body>
     </html>
   )

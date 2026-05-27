@@ -1,54 +1,29 @@
-import { NextResponse } from 'next/server'
+import { requireAuth, getTenantId } from "@/lib/auth-helpers";
+import { prisma } from "@/lib/prisma";
 
-// Mock data for posts - in production, this would come from a database
-const mockPosts = [
-  {
-    id: '1',
-    content: 'Just launched our new AI-powered dashboard! 🚀 Check out the latest features.',
-    platform: 'twitter',
-    status: 'ready',
-    date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: '2',
-    content: 'Excited to announce that PostFlow AI is now available to all users. Sign up today!',
-    platform: 'linkedin',
-    status: 'ready',
-    date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: '3',
-    content: 'Behind the scenes: How we built the fastest post scheduler in the market.',
-    platform: 'instagram',
-    status: 'processing',
-    date: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: '4',
-    content: 'New feature alert: AI-powered image generation for your posts is live!',
-    platform: 'facebook',
-    status: 'ready',
-    date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: '5',
-    content: 'Join 10k+ creators already using PostFlow AI to grow their audience.',
-    platform: 'threads',
-    status: 'failed',
-    date: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-  },
-]
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Return mock data
-    // In production, you would query your database here
-    return NextResponse.json(mockPosts)
+    await requireAuth();
+    const tenantId = await getTenantId();
+
+    if (!tenantId) {
+      return new Response(JSON.stringify({ error: "No tenant" }), {
+        status: 400,
+      });
+    }
+
+    const posts = await prisma.post.findMany({
+      where: { tenantId },
+      include: { author: { select: { name: true, email: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+
+    return new Response(JSON.stringify(posts), { status: 200 });
   } catch (error) {
-    console.error('Error fetching posts:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch posts' },
-      { status: 500 }
-    )
+    console.error("Error fetching posts:", error);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+    });
   }
 }
