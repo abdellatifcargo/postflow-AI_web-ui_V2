@@ -110,6 +110,7 @@ export default function LoginPage() {
               <option value="">Select a tenant</option>
               <option value="acme">ACME Corp</option>
               <option value="techcorp">TechCorp</option>
+              <option value="acme">tatif</option>
               <option value="startup">StartupXYZ</option>
             </select>
           </div>
