@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -20,8 +20,16 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [tenantSlug, setTenantSlug] = useState("");
+  const [tenants, setTenants] = useState<{ id: string; name: string }[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/tenants")
+      .then((res) => res.json())
+      .then((data) => setTenants(data))
+      .catch(() => setTenants([]));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,10 +116,11 @@ export default function LoginPage() {
               className="w-full px-3 py-2 border border-input bg-background rounded-md text-foreground"
             >
               <option value="">Select a tenant</option>
-              <option value="acme">ACME Corp</option>
-              <option value="techcorp">TechCorp</option>
-              <option value="acme">tatif</option>
-              <option value="startup">StartupXYZ</option>
+              {tenants.map((tenant) => (
+                <option key={tenant.id} value={tenant.id}>
+                  {tenant.name}
+                </option>
+              ))}
             </select>
           </div>
 
